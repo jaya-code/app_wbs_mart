@@ -16,7 +16,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
 
   Future<String> getApiLink() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('api_link') ?? 'https://default-link.com';
+    return prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
   }
 
   Future<void> fetchData() async {
@@ -45,14 +45,14 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
     }
   }
 
-  Future<void> updateData(int id, int jumlah) async {
+  Future<void> updateData(int id, int stok_real) async {
     final apiLink = await getApiLink();
     final url = Uri.parse('$apiLink/api/stok-opname/$id');
 
     final response = await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'jumlah': jumlah}),
+      body: jsonEncode({'stok_real': stok_real}),
     );
 
     if (response.statusCode == 200) {
@@ -150,7 +150,8 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                 itemBuilder: (context, index) {
                   final item = hasil[index];
                   final id = item['id'];
-                  final jumlah = item['jumlah'];
+                  final stok_real = item['stok_real'];
+                  final product_name = item['product_name'];
 
                   return Card(
                     margin: const EdgeInsets.symmetric(
@@ -158,14 +159,41 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                       vertical: 6,
                     ),
                     child: ListTile(
-                      title: Text("Kode: ${item['kode_barang']}"),
-                      subtitle: Text("Jumlah Real: $jumlah"),
+                      title: Text("${item['product_id']}"),
+                      subtitle: Text("$product_name\nStok Real: $stok_real"),
+                      isThreeLine: true,
+                      contentPadding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: const Color.fromARGB(255, 237, 196, 62),
+                      textColor: Colors.black,
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (_) => AlertDialog(
+                                title: const Text('Detail'),
+                                content: Text(
+                                  'Product ID: ${item['product_id']}\n'
+                                  'Product Name: $product_name\n'
+                                  'Stok Real: $stok_real',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Tutup'),
+                                  ),
+                                ],
+                              ),
+                        );
+                      },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => showEditDialog(id, jumlah),
+                            onPressed: () => showEditDialog(id, stok_real),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),

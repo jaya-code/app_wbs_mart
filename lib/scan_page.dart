@@ -12,18 +12,18 @@ class ScanPage extends StatefulWidget {
 }
 
 class _ScanPageState extends State<ScanPage> {
-  String? kode;
-  String? nama;
-  int? stok;
+  String? productId;
+  String? productName;
+  int? stock;
   bool scanned = false;
 
   final TextEditingController jumlahController = TextEditingController();
   final MobileScannerController scannerController = MobileScannerController();
 
-  Future<void> getBarang(String kodeBarang) async {
+  Future<void> getBarang(String productKode) async {
     final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'https://default-link.com';
-    final url = Uri.parse('$apiLink/api/barang/$kodeBarang');
+    final apiLink = prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
+    final url = Uri.parse('$apiLink/api/product/$productKode');
     final response = await http.get(url);
 
     if (!mounted) return;
@@ -31,16 +31,16 @@ class _ScanPageState extends State<ScanPage> {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
-        kode = data['kode'];
-        nama = data['nama'];
-        stok = data['stok'];
+        productId = data['product_id'].toString();
+        productName = data['product_name'];
+        stock = data['stock'];
         scanned = true;
       });
     } else {
       setState(() {
-        kode = null;
-        nama = 'Barang tidak ditemukan';
-        stok = null;
+        productId = '';
+        productName = 'Barang tidak ditemukan';
+        stock = null;
         scanned = true;
       });
     }
@@ -48,16 +48,27 @@ class _ScanPageState extends State<ScanPage> {
 
   Future<void> simpanOpname() async {
     final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'https://default-link.com';
+    final apiLink = prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
     final url = Uri.parse('$apiLink/api/stok-opname');
+
+    final stokReal = double.tryParse(jumlahController.text.trim()) ?? 0;
+
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
-        'kode_barang': kode,
-        'jumlah': int.tryParse(jumlahController.text) ?? 0,
+        'product_id': productId,
+        'stok_real': stokReal,
+        'tanggal':
+            DateTime.now()
+                .toIso8601String()
+                .split('T')
+                .first, // Format: YYYY-MM-DD
       }),
     );
+
+    print('Status Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
 
     if (!mounted) return;
 
@@ -87,7 +98,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan Stok Opname'),
+        title: const Text('Scan Stock Opname'),
         backgroundColor: Color.fromARGB(255, 41, 41, 41),
         foregroundColor: Colors.white,
       ),
@@ -117,15 +128,15 @@ class _ScanPageState extends State<ScanPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Kode: $kode'),
-                    Text('Nama: $nama'),
-                    Text('Stok: $stok'),
+                    Text('product id: $productId'),
+                    Text('product name: $productName'),
+                    Text('Stock: $stock'),
                     const SizedBox(height: 10),
                     TextField(
                       controller: jumlahController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Jumlah stok real',
+                        labelText: 'Jumlah stock real',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -137,9 +148,9 @@ class _ScanPageState extends State<ScanPage> {
                           onPressed: () {
                             setState(() {
                               scanned = false;
-                              kode = null;
-                              nama = null;
-                              stok = null;
+                              productId = null;
+                              productName = null;
+                              stock = null;
                             });
                           },
                           style: ElevatedButton.styleFrom(
@@ -166,7 +177,7 @@ class _ScanPageState extends State<ScanPage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Jumlah stok tidak boleh kosong',
+                                    'Jumlah stock tidak boleh kosong',
                                   ),
                                   backgroundColor: Colors.red,
                                 ),
