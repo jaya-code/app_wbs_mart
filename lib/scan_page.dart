@@ -126,9 +126,64 @@ class _ScanPageState extends State<ScanPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: simpanOpname,
-                      child: const Text('Simpan'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              scanned = false;
+                              kode = null;
+                              nama = null;
+                              stok = null;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            backgroundColor: Colors.red,
+                            foregroundColor:
+                                Colors.white, // text color set to white
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white, // ensure text color is white
+                            ),
+                          ),
+                          child: const Text('Scan Ulang'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (jumlahController.text.trim().isNotEmpty) {
+                              simpanOpname();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Jumlah stok tidak boleh kosong',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            backgroundColor: Colors.green, // warna hijau
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          child: const Text('Simpan'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
