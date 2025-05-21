@@ -31,7 +31,11 @@ class StokOpnameMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Wbs Mart')),
+      appBar: AppBar(
+        title: const Text('Wbs Mart'),
+        backgroundColor: Color.fromARGB(255, 41, 41, 41),
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
@@ -83,7 +87,7 @@ class StokOpnameMenuPage extends StatelessWidget {
   }) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color.fromARGB(255, 34, 34, 34),
+        backgroundColor: const Color.fromARGB(255, 237, 196, 62),
         foregroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

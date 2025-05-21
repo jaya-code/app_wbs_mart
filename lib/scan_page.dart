@@ -86,7 +86,11 @@ class _ScanPageState extends State<ScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Stok Opname')),
+      appBar: AppBar(
+        title: const Text('Scan Stok Opname'),
+        backgroundColor: Color.fromARGB(255, 41, 41, 41),
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           Expanded(

@@ -66,7 +66,11 @@ class _PengaturanPageState extends State<PengaturanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengaturan Link API')),
+      appBar: AppBar(
+        title: const Text('Pengaturan Link API'),
+        backgroundColor: Color.fromARGB(255, 41, 41, 41),
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -86,6 +90,10 @@ class _PengaturanPageState extends State<PengaturanPage> {
                     onPressed: _saveLink,
                     icon: const Icon(Icons.save),
                     label: const Text('Simpan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
