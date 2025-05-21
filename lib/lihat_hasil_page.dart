@@ -89,6 +89,10 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                     Navigator.pop(context);
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Simpan'),
               ),
             ],
@@ -113,6 +117,10 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                   Navigator.pop(context);
                   hapusData(id);
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('Hapus'),
               ),
             ],
@@ -129,7 +137,11 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Hasil Stok Opname')),
+      appBar: AppBar(
+        title: const Text('Hasil Stok Opname'),
+        foregroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 41, 41, 41),
+      ),
       body:
           hasil.isEmpty
               ? const Center(child: CircularProgressIndicator())
