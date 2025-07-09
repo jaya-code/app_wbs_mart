@@ -68,7 +68,7 @@ class _PengaturanPageState extends State<PengaturanPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pengaturan Link API'),
-        backgroundColor: Color.fromARGB(255, 41, 41, 41),
+        backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -78,10 +78,12 @@ class _PengaturanPageState extends State<PengaturanPage> {
             TextField(
               controller: _controller,
               decoration: const InputDecoration(
+                hintText: 'Masukkan link API',
                 labelText: 'Link API',
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 20),
             Row(
               children: [

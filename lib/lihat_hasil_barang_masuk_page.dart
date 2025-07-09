@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LihatHasilPage extends StatefulWidget {
-  const LihatHasilPage({Key? key}) : super(key: key);
+class LihatHasilBarangMasukPage extends StatefulWidget {
+  const LihatHasilBarangMasukPage({Key? key}) : super(key: key);
 
   @override
-  _LihatHasilPageState createState() => _LihatHasilPageState();
+  _LihatHasilBarangMasukPageState createState() =>
+      _LihatHasilBarangMasukPageState();
 }
 
-class _LihatHasilPageState extends State<LihatHasilPage> {
+class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
   List<dynamic> hasil = [];
   List<dynamic> filteredHasil = [];
   final TextEditingController _searchController = TextEditingController();
@@ -63,7 +64,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                   });
 
                   final apiLink = await getApiLink();
-                  final url = Uri.parse('$apiLink/api/stok-opname/$id');
+                  final url = Uri.parse('$apiLink/api/barang-masuk/$id');
                   final response = await http.put(
                     url,
                     headers: {'Content-Type': 'application/json'},
@@ -101,7 +102,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
     });
     try {
       final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/stok-opname');
+      final url = Uri.parse('$apiLink/api/barang-masuk');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -173,7 +174,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                 onPressed: () async {
                   Navigator.pop(context); // Close dialog first
                   final apiLink = await getApiLink();
-                  final url = Uri.parse('$apiLink/api/stok-opname/$id');
+                  final url = Uri.parse('$apiLink/api/barang-masuk/$id');
                   final response = await http.delete(url);
                   if (response.statusCode == 200 ||
                       response.statusCode == 204) {
@@ -204,7 +205,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hasil Stok Opname'),
+        title: const Text('Hasil Barang Masuk'),
         foregroundColor: Colors.white,
         backgroundColor: Colors.orange,
       ),

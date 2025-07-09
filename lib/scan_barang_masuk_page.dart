@@ -4,17 +4,16 @@ import 'dart:convert';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ScanPage extends StatefulWidget {
-  const ScanPage({super.key});
+class ScanBarangMasukPage extends StatefulWidget {
+  const ScanBarangMasukPage({super.key});
 
   @override
-  State<ScanPage> createState() => _ScanPageState();
+  State<ScanBarangMasukPage> createState() => _ScanBarangMasukPageState();
 }
 
-class _ScanPageState extends State<ScanPage> {
+class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> {
   String? productId;
   String? productName;
-  String? barcode;
   int? stock;
   bool scanned = false;
 
@@ -33,15 +32,13 @@ class _ScanPageState extends State<ScanPage> {
       final data = json.decode(response.body);
       setState(() {
         productId = data['product_id'].toString();
-        barcode = data['barcode'];
         productName = data['product_name'];
-        stock = int.tryParse(data['stock'].toString());
+        stock = data['stock'];
         scanned = true;
       });
     } else {
       setState(() {
         productId = '';
-        barcode = productKode;
         productName = 'Barang tidak ditemukan';
         stock = null;
         scanned = true;
@@ -101,7 +98,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan Stock Opname'),
+        title: const Text('Scan Barang Masuk'),
         backgroundColor: Color.fromARGB(255, 41, 41, 41),
         foregroundColor: Colors.white,
       ),
@@ -132,7 +129,6 @@ class _ScanPageState extends State<ScanPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('product id: $productId'),
-                    Text('barcode: $barcode'),
                     Text('product name: $productName'),
                     Text('Stock: $stock'),
                     const SizedBox(height: 10),
