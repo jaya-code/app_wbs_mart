@@ -49,7 +49,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> {
   Future<void> simpanOpname() async {
     final prefs = await SharedPreferences.getInstance();
     final apiLink = prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
-    final url = Uri.parse('$apiLink/api/stok-opname');
+    final url = Uri.parse('$apiLink/api/barang-masuk');
 
     final stokReal = double.tryParse(jumlahController.text.trim()) ?? 0;
 
