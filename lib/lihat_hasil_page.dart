@@ -133,8 +133,10 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                 (item['product_name'] ?? '').toString().toLowerCase();
             final productId =
                 (item['product_id'] ?? '').toString().toLowerCase();
+            final barcode = (item['barcode'] ?? '').toString().toLowerCase();
             return productName.contains(_searchQuery.toLowerCase()) ||
-                productId.contains(_searchQuery.toLowerCase());
+                productId.contains(_searchQuery.toLowerCase()) ||
+                barcode.contains(_searchQuery.toLowerCase());
           }).toList();
     }
     setState(() {});
@@ -232,6 +234,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                       itemBuilder: (context, index) {
                         final item = filteredHasil[index];
                         final id = item['id'];
+                        final barcode = item['barcode'];
                         final stok_real = item['stok_real'];
                         final product_name = item['product_name'];
 
@@ -241,7 +244,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
                             vertical: 6,
                           ),
                           child: ListTile(
-                            title: Text("${item['product_id']}"),
+                            title: Text("${item['product_id']} - $barcode"),
                             subtitle: Text(
                               "$product_name\nStok Real: $stok_real",
                             ),
