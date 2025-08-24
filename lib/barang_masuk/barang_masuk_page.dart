@@ -1,16 +1,13 @@
-// ==========================
-// Halaman Stok Opname
-// ==========================
 import 'package:flutter/material.dart';
 
-class StokOpnamePage extends StatelessWidget {
-  const StokOpnamePage({super.key});
+class BarangMasukPage extends StatelessWidget {
+  const BarangMasukPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Stok Opname'),
+        title: Center(child: const Text('Barang Masuk')),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
@@ -25,14 +22,14 @@ class StokOpnamePage extends StatelessWidget {
               icon: Icons.qr_code_scanner,
               label: 'Mulai Scan',
               onTap: () {
-                Navigator.pushNamed(context, '/scan');
+                Navigator.pushNamed(context, '/scan_bm');
               },
             ),
             _buildMenuButton(
               icon: Icons.list_alt,
               label: 'Lihat Hasil',
               onTap: () {
-                Navigator.pushNamed(context, '/hasil');
+                Navigator.pushNamed(context, '/hasil_bm');
               },
             ),
           ],

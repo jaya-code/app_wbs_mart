@@ -1,8 +1,10 @@
-import 'package:coba1/lihat_hasil_barang_masuk_page.dart';
-import 'package:coba1/scan_barang_masuk_page.dart';
+import 'package:coba1/barang_masuk/barang_masuk_page.dart';
+import 'package:coba1/barang_masuk/lihat_hasil_barang_masuk_page.dart';
+import 'package:coba1/barang_masuk/scan_barang_masuk_page.dart';
+import 'package:coba1/stock_opname/scan_stock_opname_page.dart';
+import 'package:coba1/stock_opname/stock_opname_page.dart';
 import 'package:flutter/material.dart';
-import 'package:coba1/scan_page.dart';
-import 'package:coba1/lihat_hasil_page.dart';
+import 'package:coba1/stock_opname/lihat_hasil_page.dart';
 import 'package:coba1/pengaturan_page.dart';
 
 void main() {
@@ -19,7 +21,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: const MainMenuPage(),
       routes: {
-        '/scan': (context) => const ScanPage(),
+        '/scan_stock_opname': (context) => const ScanStockOpnamePage(),
         '/hasil': (context) => const LihatHasilPage(),
         '/scan_bm': (context) => const ScanBarangMasukPage(),
         '/hasil_bm': (context) => const LihatHasilBarangMasukPage(),
@@ -53,7 +55,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
         backgroundColor: Colors.orange,
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        selectedItemColor: Colors.white,
+        selectedItemColor: Colors.black,
         unselectedItemColor: Colors.white,
         selectedLabelStyle: const TextStyle(
           color: Color.fromARGB(255, 0, 0, 0),
@@ -61,151 +63,17 @@ class _MainMenuPageState extends State<MainMenuPage> {
         unselectedLabelStyle: const TextStyle(color: Colors.white),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory, color: Colors.white),
+            icon: Icon(Icons.inventory),
             label: 'Barang Masuk',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code, color: Colors.white),
+            icon: Icon(Icons.qr_code),
             label: 'Stok Opname',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings, color: Colors.white),
+            icon: Icon(Icons.settings),
             label: 'Pengaturan',
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==========================
-// Halaman Barang Masuk
-// ==========================
-class BarangMasukPage extends StatelessWidget {
-  const BarangMasukPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Barang Masuk'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildMenuButton(
-              icon: Icons.qr_code_scanner,
-              label: 'Mulai Scan',
-              onTap: () {
-                Navigator.pushNamed(context, '/scan_bm');
-              },
-            ),
-            _buildMenuButton(
-              icon: Icons.list_alt,
-              label: 'Lihat Hasil',
-              onTap: () {
-                Navigator.pushNamed(context, '/hasil_bm');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color.fromARGB(255, 237, 196, 62),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.all(16),
-      ),
-      onPressed: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 40),
-          const SizedBox(height: 10),
-          Text(label, textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-}
-
-// ==========================
-// Halaman Stok Opname
-// ==========================
-class StokOpnamePage extends StatelessWidget {
-  const StokOpnamePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stok Opname'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildMenuButton(
-              icon: Icons.qr_code_scanner,
-              label: 'Mulai Scan',
-              onTap: () {
-                Navigator.pushNamed(context, '/scan');
-              },
-            ),
-            _buildMenuButton(
-              icon: Icons.list_alt,
-              label: 'Lihat Hasil',
-              onTap: () {
-                Navigator.pushNamed(context, '/hasil');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color.fromARGB(255, 237, 196, 62),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.all(16),
-      ),
-      onPressed: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 40),
-          const SizedBox(height: 10),
-          Text(label, textAlign: TextAlign.center),
         ],
       ),
     );

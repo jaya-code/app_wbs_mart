@@ -1,39 +1,14 @@
-import 'package:coba1/lihat_hasil_page.dart';
-import 'package:coba1/pengaturan_page.dart';
-import 'package:coba1/scan_page.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Menu Stok Opname',
-      debugShowCheckedModeBanner: false,
-      home: const StokOpnameMenuPage(),
-      routes: {
-        '/scan': (context) => const ScanPage(),
-        '/hasil': (context) => const LihatHasilPage(),
-        '/pengaturan': (context) => const PengaturanPage(),
-      },
-    );
-  }
-}
-
-class StokOpnameMenuPage extends StatelessWidget {
-  const StokOpnameMenuPage({super.key});
+class StokOpnamePage extends StatelessWidget {
+  const StokOpnamePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Wbs Mart'),
-        backgroundColor: Color.fromARGB(255, 41, 41, 41),
+        title: Center(child: const Text('Stok Opname')),
+        backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -47,7 +22,20 @@ class StokOpnameMenuPage extends StatelessWidget {
               icon: Icons.qr_code_scanner,
               label: 'Mulai Scan',
               onTap: () {
-                // Aksi saat tombol ditekan
+                Navigator.pushNamed(context, '/scan_stock_opname');
+              },
+            ),
+            _buildMenuButton(
+              icon: Icons.input_outlined,
+              label: 'Input Barcode',
+              onTap: () {
+                Navigator.pushNamed(context, '/scan');
+              },
+            ),
+            _buildMenuButton(
+              icon: Icons.search,
+              label: 'Cari Barang',
+              onTap: () {
                 Navigator.pushNamed(context, '/scan');
               },
             ),
@@ -55,23 +43,7 @@ class StokOpnameMenuPage extends StatelessWidget {
               icon: Icons.list_alt,
               label: 'Lihat Hasil',
               onTap: () {
-                // Aksi lihat hasil
                 Navigator.pushNamed(context, '/hasil');
-              },
-            ),
-            _buildMenuButton(
-              icon: Icons.upload_file,
-              label: 'Upload Data',
-              onTap: () {
-                // Aksi upload
-              },
-            ),
-            _buildMenuButton(
-              icon: Icons.settings,
-              label: 'Pengaturan',
-              onTap: () {
-                // Aksi pengaturan
-                Navigator.pushNamed(context, '/pengaturan');
               },
             ),
           ],
@@ -88,7 +60,7 @@ class StokOpnameMenuPage extends StatelessWidget {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color.fromARGB(255, 237, 196, 62),
-        foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+        foregroundColor: Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.all(16),

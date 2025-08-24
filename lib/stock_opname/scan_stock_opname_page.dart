@@ -4,14 +4,14 @@ import 'dart:convert';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ScanPage extends StatefulWidget {
-  const ScanPage({super.key});
+class ScanStockOpnamePage extends StatefulWidget {
+  const ScanStockOpnamePage({super.key});
 
   @override
-  State<ScanPage> createState() => _ScanPageState();
+  State<ScanStockOpnamePage> createState() => _ScanStockOpnamePageState();
 }
 
-class _ScanPageState extends State<ScanPage> {
+class _ScanStockOpnamePageState extends State<ScanStockOpnamePage> {
   String? productId;
   String? productName;
   String? barcode;
@@ -23,7 +23,7 @@ class _ScanPageState extends State<ScanPage> {
 
   Future<void> getBarang(String productKode) async {
     final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
+    final apiLink = prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
     final url = Uri.parse('$apiLink/api/product/$productKode');
     final response = await http.get(url);
 
@@ -51,7 +51,7 @@ class _ScanPageState extends State<ScanPage> {
 
   Future<void> simpanOpname() async {
     final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
+    final apiLink = prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
     final url = Uri.parse('$apiLink/api/stok-opname');
 
     final stokReal = double.tryParse(jumlahController.text.trim()) ?? 0;

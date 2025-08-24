@@ -20,7 +20,7 @@ class _LihatHasilPageState extends State<LihatHasilPage> {
 
   Future<String> getApiLink() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('api_link') ?? 'http://192.168.8.177:8000';
+    return prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
   }
 
   // Method to show edit dialog for editing stok_real and update on API
