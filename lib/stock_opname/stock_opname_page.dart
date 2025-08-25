@@ -36,14 +36,14 @@ class StokOpnamePage extends StatelessWidget {
               icon: Icons.search,
               label: 'Cari Barang',
               onTap: () {
-                Navigator.pushNamed(context, '/scan');
+                Navigator.pushNamed(context, '/search_product_stock_opname');
               },
             ),
             _buildMenuButton(
               icon: Icons.list_alt,
-              label: 'Lihat Hasil',
+              label: 'Hasil Stok Opname',
               onTap: () {
-                Navigator.pushNamed(context, '/hasil');
+                Navigator.pushNamed(context, '/hasil_stock_opname');
               },
             ),
           ],

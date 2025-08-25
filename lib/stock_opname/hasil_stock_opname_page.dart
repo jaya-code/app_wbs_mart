@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LihatHasilPage extends StatefulWidget {
-  const LihatHasilPage({Key? key}) : super(key: key);
+class HasilStockOpnamePage extends StatefulWidget {
+  const HasilStockOpnamePage({Key? key}) : super(key: key);
 
   @override
-  _LihatHasilPageState createState() => _LihatHasilPageState();
+  _HasilStockOpnamePageState createState() => _HasilStockOpnamePageState();
 }
 
-class _LihatHasilPageState extends State<LihatHasilPage> {
+class _HasilStockOpnamePageState extends State<HasilStockOpnamePage> {
   List<dynamic> hasil = [];
   List<dynamic> filteredHasil = [];
   final TextEditingController _searchController = TextEditingController();

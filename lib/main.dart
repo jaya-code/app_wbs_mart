@@ -2,9 +2,10 @@ import 'package:coba1/barang_masuk/barang_masuk_page.dart';
 import 'package:coba1/barang_masuk/lihat_hasil_barang_masuk_page.dart';
 import 'package:coba1/barang_masuk/scan_barang_masuk_page.dart';
 import 'package:coba1/stock_opname/scan_stock_opname_page.dart';
+import 'package:coba1/stock_opname/search_product_so.dart';
 import 'package:coba1/stock_opname/stock_opname_page.dart';
 import 'package:flutter/material.dart';
-import 'package:coba1/stock_opname/lihat_hasil_page.dart';
+import 'package:coba1/stock_opname/hasil_stock_opname_page.dart';
 import 'package:coba1/pengaturan_page.dart';
 
 void main() {
@@ -22,7 +23,9 @@ class MyApp extends StatelessWidget {
       home: const MainMenuPage(),
       routes: {
         '/scan_stock_opname': (context) => const ScanStockOpnamePage(),
-        '/hasil': (context) => const LihatHasilPage(),
+        '/hasil_stock_opname': (context) => const HasilStockOpnamePage(),
+        '/search_product_stock_opname':
+            (context) => const SearchProductStockOpname(),
         '/scan_bm': (context) => const ScanBarangMasukPage(),
         '/hasil_bm': (context) => const LihatHasilBarangMasukPage(),
         '/pengaturan': (context) => const PengaturanPage(),
@@ -63,11 +66,11 @@ class _MainMenuPageState extends State<MainMenuPage> {
         unselectedLabelStyle: const TextStyle(color: Colors.white),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
+            icon: Icon(Icons.input_outlined),
             label: 'Barang Masuk',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code),
+            icon: Icon(Icons.check_sharp),
             label: 'Stok Opname',
           ),
           BottomNavigationBarItem(
