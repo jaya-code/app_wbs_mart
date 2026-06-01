@@ -70,8 +70,8 @@ class _ScanStockOpnamePageState extends State<ScanStockOpnamePage> {
       }),
     );
 
-    print('Status Code: ${response.statusCode}');
-    print('Response Body: ${response.body}');
+    debugPrint('Status Code: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
 
     if (!mounted) return;
 
