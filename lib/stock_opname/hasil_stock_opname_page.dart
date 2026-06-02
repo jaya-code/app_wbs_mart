@@ -376,7 +376,7 @@ class _HasilStockOpnamePageState extends State<HasilStockOpnamePage> {
                             copies: copies,
                           );
 
-                          if (!mounted) return;
+                          if (!context.mounted) return;
 
                           if (success) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -27,9 +27,32 @@ class _PengaturanPageState extends State<PengaturanPage> {
     });
   }
 
+  String _normalizeUrl(String input) {
+    String url = input.trim();
+    if (url.isEmpty) return url;
+
+    // Remove trailing slashes
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    // Remove trailing /api
+    if (url.endsWith('/api')) {
+      url = url.substring(0, url.length - 4);
+    }
+    // Remove trailing slashes again
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
   Future<void> _saveLink() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('api_link', _controller.text.trim());
+    final url = _normalizeUrl(_controller.text);
+    await prefs.setString('api_link', url);
+    setState(() {
+      _controller.text = url;
+    });
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -37,23 +60,26 @@ class _PengaturanPageState extends State<PengaturanPage> {
   }
 
   Future<void> _tesKoneksi() async {
-    final url = _controller.text.trim();
-    if (url.isEmpty) {
+    final rawUrl = _controller.text.trim();
+    if (rawUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Link API tidak boleh kosong')),
       );
       return;
     }
 
+    final baseUrl = _normalizeUrl(rawUrl);
+    final testUrl = '$baseUrl/api';
+
     try {
       final response = await http
-          .get(Uri.parse(url))
+          .get(Uri.parse(testUrl))
           .timeout(const Duration(seconds: 5));
       if (!mounted) return;
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 500) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Koneksi berhasil ✅')));
+        ).showSnackBar(SnackBar(content: Text('Koneksi berhasil (HTTP ${response.statusCode}) ✅')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal: ${response.statusCode} ❌')),

@@ -177,6 +177,70 @@ class PrinterService {
     }
   }
 
+  // Print Pricetag (New Template with member price and shelf location)
+  Future<bool> printPricetag({
+    required String productId,
+    required String productName,
+    required double price,
+    double? memberPrice,
+    String? kodeRak,
+    String? barcode,
+    int copies = 1,
+  }) async {
+    if (!await checkConnection()) return false;
+
+    try {
+      final String formattedPrice = _formatRupiah(price);
+      final String formattedMemberPrice = memberPrice != null ? _formatRupiah(memberPrice) : '-';
+      final String cleanedName = _cleanText(productName);
+      final String cleanedId = _cleanText(productId);
+      final String? cleanedBarcode = barcode != null ? _cleanText(barcode) : null;
+      final String cleanedRak = kodeRak != null ? _cleanText(kodeRak) : '-';
+
+      for (int i = 0; i < copies; i++) {
+        _bluetooth.printNewLine();
+        _bluetooth.printCustom("=== PRICE TAG ===", 1, 1);
+        _bluetooth.printCustom("WBS MART", 2, 1);
+        _bluetooth.printCustom("--------------------------------", 0, 1);
+        
+        // Product Name
+        if (cleanedName.length > 22) {
+          _bluetooth.printCustom(cleanedName.substring(0, 22), 1, 1);
+          if (cleanedName.length > 44) {
+            _bluetooth.printCustom(cleanedName.substring(22, 44), 1, 1);
+          } else {
+            _bluetooth.printCustom(cleanedName.substring(22), 1, 1);
+          }
+        } else {
+          _bluetooth.printCustom(cleanedName, 1, 1);
+        }
+
+        if (cleanedBarcode != null && cleanedBarcode.isNotEmpty) {
+          _bluetooth.printCustom("Barcode: $cleanedBarcode", 0, 1);
+        } else {
+          _bluetooth.printCustom("Kode: $cleanedId", 0, 1);
+        }
+        
+        _bluetooth.printCustom("Rak: $cleanedRak", 0, 1);
+        _bluetooth.printCustom("--------------------------------", 0, 1);
+        
+        // Pricing
+        _bluetooth.printCustom("HARGA UMUM : $formattedPrice", 1, 1);
+        if (memberPrice != null && memberPrice > 0) {
+          _bluetooth.printCustom("HARGA MEMBER: $formattedMemberPrice", 2, 1);
+        }
+        
+        _bluetooth.printCustom("================================", 0, 1);
+        _bluetooth.printNewLine();
+        _bluetooth.printNewLine();
+        _bluetooth.printNewLine();
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Formatting utility for Rupiah
   String _formatRupiah(double number) {
     String str = number.round().toString();

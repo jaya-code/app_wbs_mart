@@ -407,7 +407,7 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                                   copies: copies,
                                 );
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
 
                             if (success) {
                               ScaffoldMessenger.of(context).showSnackBar(
