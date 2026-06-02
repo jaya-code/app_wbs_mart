@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:coba1/services/printer_service.dart';
+import 'package:coba1/services/api_client.dart';
 
 class LihatHasilBarangMasukPage extends StatefulWidget {
   const LihatHasilBarangMasukPage({super.key});
@@ -64,12 +64,9 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                     _isLoading = true;
                   });
 
-                  final apiLink = await getApiLink();
-                  final url = Uri.parse('$apiLink/api/barang-masuk/$id');
-                  final response = await http.put(
-                    url,
-                    headers: {'Content-Type': 'application/json'},
-                    body: jsonEncode({'stok_real': newStok}),
+                  final response = await ApiClient.put(
+                    '/api/barang-masuk/$id',
+                    body: {'stok_real': newStok},
                   );
 
                   if (response.statusCode == 200 ||
@@ -455,9 +452,7 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
       _isLoading = true;
     });
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/barang-masuk');
-      final response = await http.get(url);
+      final response = await ApiClient.get('/api/barang-masuk');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -527,9 +522,7 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
               ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(dialogContext); // Close dialog first
-                  final apiLink = await getApiLink();
-                  final url = Uri.parse('$apiLink/api/barang-masuk/$id');
-                  final response = await http.delete(url);
+                  final response = await ApiClient.delete('/api/barang-masuk/$id');
                   if (!mounted) return;
                   if (response.statusCode == 200 ||
                       response.statusCode == 204) {

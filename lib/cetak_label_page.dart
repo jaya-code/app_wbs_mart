@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/printer_service.dart';
+import 'package:coba1/services/api_client.dart';
 
 class PrintQueueItem {
   String productId;
@@ -14,6 +14,7 @@ class PrintQueueItem {
   String? kodeRak;
   int copies;
   String templateType; // 'label' or 'pricetag'
+  String? periodeReturn;
 
   PrintQueueItem({
     required this.productId,
@@ -24,6 +25,7 @@ class PrintQueueItem {
     this.kodeRak,
     required this.copies,
     required this.templateType,
+    this.periodeReturn,
   });
 }
 
@@ -34,7 +36,8 @@ class CetakLabelPage extends StatefulWidget {
   State<CetakLabelPage> createState() => _CetakLabelPageState();
 }
 
-class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProviderStateMixin {
+class _CetakLabelPageState extends State<CetakLabelPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   final MobileScannerController _scannerController = MobileScannerController();
@@ -50,11 +53,21 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
 
   // Print Queue
   final List<PrintQueueItem> _printQueue = [];
+  String _defaultReturnPeriod = '7 Hari';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _defaultReturnPeriod =
+          prefs.getString('pricetag_default_return') ?? '7 Hari';
+    });
   }
 
   @override
@@ -98,9 +111,9 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/product/$code');
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get(
+        '/api/product/$code',
+      ).timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -158,9 +171,9 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/products/search?q=$query');
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get(
+        '/api/products/search?q=$query',
+      ).timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -191,27 +204,45 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
   }
 
   // Add Product to Queue Dialog
-  void _showAddToQueueDialog(dynamic product, {bool isFromScan = false, PrintQueueItem? existingItem}) {
+  void _showAddToQueueDialog(
+    dynamic product, {
+    bool isFromScan = false,
+    PrintQueueItem? existingItem,
+  }) {
     final String productId = (product['product_id'] ?? '').toString();
     final String productName = (product['product_name'] ?? '').toString();
     final String? barcode = product['barcode']?.toString();
     final String? kodeRak = product['kode_rak']?.toString();
-    final double sellingPrice = double.tryParse(product['selling_price'].toString()) ?? 0.0;
-    final double? sellingPriceMember = product['selling_price_member'] != null
-        ? double.tryParse(product['selling_price_member'].toString())
-        : null;
+    final double sellingPrice =
+        double.tryParse(product['selling_price'].toString()) ?? 0.0;
+    final double? sellingPriceMember =
+        product['selling_price_member'] != null
+            ? double.tryParse(product['selling_price_member'].toString())
+            : null;
 
     final TextEditingController priceController = TextEditingController(
-      text: existingItem != null ? existingItem.price.toStringAsFixed(0) : sellingPrice.toStringAsFixed(0),
+      text:
+          existingItem != null
+              ? existingItem.price.toStringAsFixed(0)
+              : sellingPrice.toStringAsFixed(0),
     );
     final TextEditingController memberPriceController = TextEditingController(
-      text: existingItem != null
-          ? (existingItem.memberPrice?.toStringAsFixed(0) ?? '')
-          : (sellingPriceMember?.toStringAsFixed(0) ?? ''),
+      text:
+          existingItem != null
+              ? (existingItem.memberPrice?.toStringAsFixed(0) ?? '')
+              : (sellingPriceMember?.toStringAsFixed(0) ?? ''),
+    );
+    final String defaultReturn =
+        existingItem != null
+            ? (existingItem.periodeReturn ?? _defaultReturnPeriod)
+            : (product['periode_return']?.toString() ?? _defaultReturnPeriod);
+    final TextEditingController returnPeriodController = TextEditingController(
+      text: defaultReturn,
     );
 
     int copies = existingItem != null ? existingItem.copies : 1;
-    String templateType = existingItem != null ? existingItem.templateType : 'label';
+    String templateType =
+        existingItem != null ? existingItem.templateType : 'label';
 
     showDialog(
       context: context,
@@ -232,15 +263,22 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      existingItem != null ? Icons.edit_rounded : Icons.add_to_photos_rounded,
+                      existingItem != null
+                          ? Icons.edit_rounded
+                          : Icons.add_to_photos_rounded,
                       color: const Color(0xFF5F5AF6),
                       size: 22,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    existingItem != null ? 'Edit Item Antrian' : 'Tambah ke Antrian',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    existingItem != null
+                        ? 'Edit Item Antrian'
+                        : 'Tambah ke Antrian',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -263,18 +301,32 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                         children: [
                           Text(
                             productName,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             barcode != null && barcode.isNotEmpty
                                 ? 'ID: $productId • Barcode: $barcode'
                                 : 'ID: $productId',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           if (kodeRak != null && kodeRak.isNotEmpty) ...[
                             const SizedBox(height: 4),
-                            Text('Rak: $kodeRak', style: const TextStyle(fontSize: 11, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+                            Text(
+                              'Rak: $kodeRak',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF475569),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -284,7 +336,11 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                     // Opsi Tipe Cetak
                     const Text(
                       'Tipe Cetakan Label',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF334155),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
@@ -292,12 +348,24 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'label', child: Text('Label Harga (Rak)')),
-                        DropdownMenuItem(value: 'pricetag', child: Text('Price Tag (Gantung)')),
+                        DropdownMenuItem(
+                          value: 'label',
+                          child: Text('Label Harga (Rak)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'pricetag',
+                          child: Text('Price Tag (Gantung)'),
+                        ),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -312,7 +380,11 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                     // Harga Umum
                     const Text(
                       'Harga Jual (Rupiah)',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF334155),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     TextField(
@@ -322,11 +394,20 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                         prefixText: 'Rp ',
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF5F5AF6), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF5F5AF6),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -337,7 +418,11 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                     if (templateType == 'pricetag') ...[
                       const Text(
                         'Harga Member (Rupiah)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF334155),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -347,11 +432,55 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                           prefixText: 'Rp ',
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFF5F5AF6), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF5F5AF6),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        'Periode Return',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: returnPeriodController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. 7 Hari',
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF5F5AF6),
+                              width: 1.5,
+                            ),
                           ),
                         ),
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -365,7 +494,11 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                       children: [
                         const Text(
                           'Jumlah Cetak',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF334155),
+                          ),
                         ),
                         Row(
                           children: [
@@ -379,15 +512,28 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.remove, size: 18, color: Color(0xFF475569)),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.remove,
+                                  size: 18,
+                                  color: Color(0xFF475569),
+                                ),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
                               child: Text(
                                 '$copies',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
                             ),
                             GestureDetector(
@@ -398,8 +544,15 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
-                                child: const Icon(Icons.add, size: 18, color: Color(0xFF475569)),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  size: 18,
+                                  color: Color(0xFF475569),
+                                ),
                               ),
                             ),
                           ],
@@ -422,14 +575,20 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final double? parsedPrice = double.tryParse(priceController.text.trim());
-                    final double? parsedMemberPrice = templateType == 'pricetag'
-                        ? double.tryParse(memberPriceController.text.trim())
-                        : null;
+                    final double? parsedPrice = double.tryParse(
+                      priceController.text.trim(),
+                    );
+                    final double? parsedMemberPrice =
+                        templateType == 'pricetag'
+                            ? double.tryParse(memberPriceController.text.trim())
+                            : null;
 
                     if (parsedPrice == null || parsedPrice <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Masukkan harga jual yang valid! ❌'), backgroundColor: Color(0xFFEF4444)),
+                        const SnackBar(
+                          content: Text('Masukkan harga jual yang valid! ❌'),
+                          backgroundColor: Color(0xFFEF4444),
+                        ),
                       );
                       return;
                     }
@@ -443,24 +602,38 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                         existingItem.memberPrice = parsedMemberPrice;
                         existingItem.copies = copies;
                         existingItem.templateType = templateType;
+                        existingItem.periodeReturn =
+                            templateType == 'pricetag'
+                                ? returnPeriodController.text.trim()
+                                : null;
                       } else {
                         // Add new to queue
-                        _printQueue.add(PrintQueueItem(
-                          productId: productId,
-                          productName: productName,
-                          barcode: barcode,
-                          price: parsedPrice,
-                          memberPrice: parsedMemberPrice,
-                          kodeRak: kodeRak,
-                          copies: copies,
-                          templateType: templateType,
-                        ));
+                        _printQueue.add(
+                          PrintQueueItem(
+                            productId: productId,
+                            productName: productName,
+                            barcode: barcode,
+                            price: parsedPrice,
+                            memberPrice: parsedMemberPrice,
+                            kodeRak: kodeRak,
+                            copies: copies,
+                            templateType: templateType,
+                            periodeReturn:
+                                templateType == 'pricetag'
+                                    ? returnPeriodController.text.trim()
+                                    : null,
+                          ),
+                        );
                       }
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(existingItem != null ? 'Item antrian diperbarui! 📝' : 'Produk ditambahkan ke antrian! 📥'),
+                        content: Text(
+                          existingItem != null
+                              ? 'Item antrian diperbarui! 📝'
+                              : 'Produk ditambahkan ke antrian! 📥',
+                        ),
                         backgroundColor: const Color(0xFF5F5AF6),
                       ),
                     );
@@ -472,8 +645,13 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5F5AF6),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(existingItem != null ? 'Perbarui' : 'Tambah'),
                 ),
@@ -491,7 +669,9 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
     if (!isPrinterConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Printer terputus! Sambungkan printer di pengaturan. ❌'),
+          content: Text(
+            'Printer terputus! Sambungkan printer di pengaturan. ❌',
+          ),
           backgroundColor: Color(0xFFEF4444),
         ),
       );
@@ -508,10 +688,15 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
         return const AlertDialog(
           content: Row(
             children: [
-              CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5F5AF6))),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5F5AF6)),
+              ),
               SizedBox(width: 24),
               Expanded(
-                child: Text('Sedang mencetak antrian label...', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Sedang mencetak antrian label...',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),
@@ -539,6 +724,7 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
           memberPrice: item.memberPrice,
           kodeRak: item.kodeRak,
           barcode: item.barcode,
+          periodeReturn: item.periodeReturn,
           copies: item.copies,
         );
       }
@@ -567,7 +753,9 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Koneksi terputus! Hanya mencetak $printedCount item. ❌'),
+          content: Text(
+            'Koneksi terputus! Hanya mencetak $printedCount item. ❌',
+          ),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
@@ -622,12 +810,21 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: isConnected ? const Color(0xFF10B981).withAlpha(15) : const Color(0xFFF1F5F9),
+                  color:
+                      isConnected
+                          ? const Color(0xFF10B981).withAlpha(15)
+                          : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isConnected ? const Color(0xFF10B981).withAlpha(40) : const Color(0xFFE2E8F0),
+                    color:
+                        isConnected
+                            ? const Color(0xFF10B981).withAlpha(40)
+                            : const Color(0xFFE2E8F0),
                   ),
                 ),
                 child: Row(
@@ -636,24 +833,36 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                     Row(
                       children: [
                         Icon(
-                          isConnected ? Icons.print_rounded : Icons.print_disabled_rounded,
-                          color: isConnected ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                          isConnected
+                              ? Icons.print_rounded
+                              : Icons.print_disabled_rounded,
+                          color:
+                              isConnected
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF64748B),
                           size: 20,
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          isConnected ? 'Terhubung: $printerName' : 'Printer belum terhubung',
+                          isConnected
+                              ? 'Terhubung: $printerName'
+                              : 'Printer belum terhubung',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isConnected ? const Color(0xFF047857) : const Color(0xFF475569),
+                            color:
+                                isConnected
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFF475569),
                           ),
                         ),
                       ],
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushNamed(context, '/printer_setup').then((_) {
+                        Navigator.pushNamed(context, '/printer_setup').then((
+                          _,
+                        ) {
                           if (mounted) setState(() {});
                         });
                       },
@@ -678,7 +887,10 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
                 height: 48,
-                decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: TabBar(
                   controller: _tabController,
                   indicatorSize: TabBarIndicatorSize.tab,
@@ -686,13 +898,23 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
-                      BoxShadow(color: const Color(0xFF0F172A).withAlpha(10), blurRadius: 4, offset: const Offset(0, 2)),
+                      BoxShadow(
+                        color: const Color(0xFF0F172A).withAlpha(10),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
                   labelColor: const Color(0xFF0F172A),
                   unselectedLabelColor: const Color(0xFF64748B),
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
                   tabs: [
                     const Tab(
                       child: Row(
@@ -783,7 +1005,10 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                       width: 250,
                       height: 150,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 3,
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
@@ -795,9 +1020,19 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
                             SizedBox(height: 16),
-                            Text('Mengambil data...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            Text(
+                              'Mengambil data...',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -815,9 +1050,11 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: _statusMessage != null && _statusMessage!.contains('tidak ditemukan')
-                  ? const Color(0xFFEF4444)
-                  : const Color(0xFF64748B),
+              color:
+                  _statusMessage != null &&
+                          _statusMessage!.contains('tidak ditemukan')
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF64748B),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -840,23 +1077,45 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
             onChanged: (val) => _searchProducts(val),
             decoration: InputDecoration(
               hintText: 'Cari produk berdasarkan nama atau barcode...',
-              hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Color(0xFF64748B)),
-                      onPressed: () {
-                        _searchController.clear();
-                        _searchProducts('');
-                      },
-                    )
-                  : null,
+              hintStyle: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 13,
+              ),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: Color(0xFF64748B),
+              ),
+              suffixIcon:
+                  _searchController.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          color: Color(0xFF64748B),
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchProducts('');
+                        },
+                      )
+                      : null,
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF5F5AF6), width: 1.5)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: Color(0xFF5F5AF6),
+                  width: 1.5,
+                ),
+              ),
             ),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
@@ -865,60 +1124,119 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
 
         // List Results
         Expanded(
-          child: _isLoadingSearch
-              ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5F5AF6))))
-              : _searchError != null
-                  ? Center(child: Text(_searchError!, style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)))
+          child:
+              _isLoadingSearch
+                  ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF5F5AF6),
+                      ),
+                    ),
+                  )
+                  : _searchError != null
+                  ? Center(
+                    child: Text(
+                      _searchError!,
+                      style: const TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
                   : _searchResults.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _searchController.text.isEmpty ? Icons.search_rounded : Icons.hourglass_empty_rounded,
-                                size: 48,
-                                color: const Color(0xFFCBD5E1),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _searchController.text.isEmpty ? 'Ketik nama barang untuk mencari' : 'Barang tidak ditemukan',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(24, 4, 24, 120),
-                          itemCount: _searchResults.length,
-                          itemBuilder: (context, index) {
-                            final product = _searchResults[index];
-                            final name = product['product_name'] ?? '-';
-                            final barcode = product['barcode'] ?? '-';
-                            final price = double.tryParse(product['selling_price'].toString()) ?? 0.0;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
-                                boxShadow: [
-                                  BoxShadow(color: const Color(0xFF0F172A).withAlpha(5), blurRadius: 10, offset: const Offset(0, 4)),
-                                ],
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                                title: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text('Barcode: $barcode\nHarga: Rp ${price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4)),
-                                ),
-                                trailing: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF5F5AF6), size: 28),
-                                onTap: () => _showAddToQueueDialog(product),
-                              ),
-                            );
-                          },
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _searchController.text.isEmpty
+                              ? Icons.search_rounded
+                              : Icons.hourglass_empty_rounded,
+                          size: 48,
+                          color: const Color(0xFFCBD5E1),
                         ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _searchController.text.isEmpty
+                              ? 'Ketik nama barang untuk mencari'
+                              : 'Barang tidak ditemukan',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 120),
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final product = _searchResults[index];
+                      final name = product['product_name'] ?? '-';
+                      final barcode = product['barcode'] ?? '-';
+                      final price =
+                          double.tryParse(
+                            product['selling_price'].toString(),
+                          ) ??
+                          0.0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFF1F5F9),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withAlpha(5),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          clipBehavior: Clip.antiAlias,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                'Barcode: $barcode\nHarga: Rp ${price.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                            trailing: const Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: Color(0xFF5F5AF6),
+                              size: 28,
+                            ),
+                            onTap: () => _showAddToQueueDialog(product),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
         ),
       ],
     );
@@ -931,11 +1249,19 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.playlist_remove_rounded, size: 64, color: Color(0xFFCBD5E1)),
+            const Icon(
+              Icons.playlist_remove_rounded,
+              size: 64,
+              color: Color(0xFFCBD5E1),
+            ),
             const SizedBox(height: 16),
             const Text(
               'Antrian cetak kosong',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -947,7 +1273,10 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
       );
     }
 
-    final int totalCopies = _printQueue.fold(0, (sum, item) => sum + item.copies);
+    final int totalCopies = _printQueue.fold(
+      0,
+      (sum, item) => sum + item.copies,
+    );
 
     return Column(
       children: [
@@ -960,80 +1289,163 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFFF1F5F9)),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF0F172A).withAlpha(5), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withAlpha(5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  title: Text(item.productName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 6.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Barcode: ${item.barcode ?? "-"}  •  Rak: ${item.kodeRak ?? "-"}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: item.templateType == 'label' ? const Color(0xFF3B82F6).withAlpha(20) : const Color(0xFF5F5AF6).withAlpha(20),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                item.templateType == 'label' ? 'Label Rak' : 'Price Tag',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: item.templateType == 'label' ? const Color(0xFF2563EB) : const Color(0xFF5F5AF6),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    title: Text(
+                      item.productName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Barcode: ${item.barcode ?? "-"}  •  Rak: ${item.kodeRak ?? "-"}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      item.templateType == 'label'
+                                          ? const Color(
+                                            0xFF3B82F6,
+                                          ).withAlpha(20)
+                                          : const Color(
+                                            0xFF5F5AF6,
+                                          ).withAlpha(20),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  item.templateType == 'label'
+                                      ? 'Label Rak'
+                                      : 'Price Tag',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        item.templateType == 'label'
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFF5F5AF6),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('Rp ${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
-                            if (item.templateType == 'pricetag' && item.memberPrice != null) ...[
-                              const SizedBox(width: 6),
-                              Text('(Mem: Rp ${item.memberPrice!.toStringAsFixed(0)})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF10B981))),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Rp ${item.price.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              if (item.templateType == 'pricetag') ...[
+                                if (item.memberPrice != null) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '(Mem: Rp ${item.memberPrice!.toStringAsFixed(0)})',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  '(Ret: ${item.periodeReturn ?? "7 Hari"})',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'x${item.copies}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit_rounded,
+                            color: Color(0xFF3B82F6),
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            // Map back to temporary map structure to re-use _showAddToQueueDialog
+                            final productMap = {
+                              'product_id': item.productId,
+                              'product_name': item.productName,
+                              'barcode': item.barcode,
+                              'kode_rak': item.kodeRak,
+                              'selling_price': item.price,
+                              'selling_price_member': item.memberPrice,
+                              'periode_return': item.periodeReturn,
+                            };
+                            _showAddToQueueDialog(
+                              productMap,
+                              existingItem: item,
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Color(0xFFEF4444),
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _printQueue.removeAt(index);
+                            });
+                          },
                         ),
                       ],
                     ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('x${item.copies}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF475569))),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.edit_rounded, color: Color(0xFF3B82F6), size: 20),
-                        onPressed: () {
-                          // Map back to temporary map structure to re-use _showAddToQueueDialog
-                          final productMap = {
-                            'product_id': item.productId,
-                            'product_name': item.productName,
-                            'barcode': item.barcode,
-                            'kode_rak': item.kodeRak,
-                            'selling_price': item.price,
-                            'selling_price_member': item.memberPrice,
-                          };
-                          _showAddToQueueDialog(productMap, existingItem: item);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                        onPressed: () {
-                          setState(() {
-                            _printQueue.removeAt(index);
-                          });
-                        },
-                      ),
-                    ],
                   ),
                 ),
               );
@@ -1043,12 +1455,16 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
 
         // Action panel at bottom
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 96),
           decoration: BoxDecoration(
             color: Colors.white,
             border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
             boxShadow: [
-              BoxShadow(color: const Color(0xFF0F172A).withAlpha(5), blurRadius: 10, offset: const Offset(0, -4)),
+              BoxShadow(
+                color: const Color(0xFF0F172A).withAlpha(5),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
+              ),
             ],
           ),
           child: Row(
@@ -1063,9 +1479,17 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     side: const BorderSide(color: Color(0xFFEF4444)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
-                  child: const Text('Hapus Semua', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Hapus Semua',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -1073,11 +1497,19 @@ class _CetakLabelPageState extends State<CetakLabelPage> with SingleTickerProvid
                 child: ElevatedButton.icon(
                   onPressed: _printAllQueue,
                   icon: const Icon(Icons.print_rounded, color: Colors.white),
-                  label: Text('Cetak ($totalCopies)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Cetak ($totalCopies)',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5F5AF6),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),

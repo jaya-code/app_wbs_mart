@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:coba1/services/api_client.dart';
 
 class SearchProductStockOpname extends StatefulWidget {
   const SearchProductStockOpname({super.key});
@@ -45,10 +45,7 @@ class _SearchProductStockOpnameState extends State<SearchProductStockOpname> {
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/stok-opname/active');
-
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get('/api/stok-opname/active').timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -93,10 +90,7 @@ class _SearchProductStockOpnameState extends State<SearchProductStockOpname> {
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/products/search?q=$query');
-
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get('/api/products/search?q=$query').timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -297,18 +291,14 @@ class _SearchProductStockOpnameState extends State<SearchProductStockOpname> {
     );
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/stok-opname/$_activeSessionId/scan');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+      final response = await ApiClient.post(
+        '/api/stok-opname/$_activeSessionId/scan',
+        body: {
           'product_id': prodId,
           'stok_real': stokReal,
-          'user_id': 1, // Default user
+          'user_id': 1,
           'tanggal': DateTime.now().toIso8601String().split('T').first,
-        }),
+        },
       );
 
       if (!mounted) return;

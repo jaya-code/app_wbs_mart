@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:coba1/services/api_client.dart';
 
 class ScanStockOpnamePage extends StatefulWidget {
   const ScanStockOpnamePage({super.key});
@@ -38,11 +37,7 @@ class _ScanStockOpnamePageState extends State<ScanStockOpnamePage> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final apiLink = prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
-      final url = Uri.parse('$apiLink/api/stok-opname/active');
-
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get('/api/stok-opname/active').timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -73,10 +68,7 @@ class _ScanStockOpnamePageState extends State<ScanStockOpnamePage> {
   }
 
   Future<void> getBarang(String productKode) async {
-    final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
-    final url = Uri.parse('$apiLink/api/product/$productKode');
-    final response = await http.get(url);
+    final response = await ApiClient.get('/api/product/$productKode');
 
     if (!mounted) return;
 
@@ -112,25 +104,16 @@ class _ScanStockOpnamePageState extends State<ScanStockOpnamePage> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final apiLink = prefs.getString('api_link') ?? 'http://192.168.1.150:8000';
-    final url = Uri.parse('$apiLink/api/stok-opname/$_activeSessionId/scan');
-
     final stokReal = double.tryParse(jumlahController.text.trim()) ?? 0;
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
+    final response = await ApiClient.post(
+      '/api/stok-opname/$_activeSessionId/scan',
+      body: {
         'product_id': productId,
         'stok_real': stokReal,
-        'user_id': 1, // Default user_id as admin
-        'tanggal':
-            DateTime.now()
-                .toIso8601String()
-                .split('T')
-                .first, // Format: YYYY-MM-DD
-      }),
+        'user_id': 1,
+        'tanggal': DateTime.now().toIso8601String().split('T').first,
+      },
     );
 
     debugPrint('Status Code: ${response.statusCode}');

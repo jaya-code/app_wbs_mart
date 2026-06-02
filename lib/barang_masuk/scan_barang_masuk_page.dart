@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:coba1/services/api_client.dart';
 
 class ScanBarangMasukPage extends StatefulWidget {
   const ScanBarangMasukPage({super.key});
@@ -13,7 +13,7 @@ class ScanBarangMasukPage extends StatefulWidget {
 
 class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTickerProviderStateMixin {
   // Navigation & Step Control
-  int? _pembelianId;
+  bool _isSessionStarted = false;
   String? _nofaktur;
   dynamic _selectedSupplier;
   String? _selectedSupplierStatusPpn; // 'include' or 'exclude'
@@ -28,7 +28,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
   final TextEditingController _searchProductController = TextEditingController();
   final MobileScannerController _scannerController = MobileScannerController();
 
-  // Tab controller for Scan vs Search Product
+  // Tab controller for Scan vs Search vs Cart
   TabController? _tabController;
 
   // Selected Product State
@@ -37,10 +37,13 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
   bool _isLoadingSearch = false;
   String? _searchError;
 
+  // Cart State
+  List<dynamic> _cartItems = [];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchSuppliers();
   }
 
@@ -65,9 +68,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/suppliers');
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get('/api/suppliers').timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -95,7 +96,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     }
   }
 
-  Future<void> _startPembelianSession() async {
+  void _startPembelianSession() {
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan pilih Supplier terlebih dahulu! ❌')),
@@ -104,59 +105,17 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     }
 
     setState(() {
-      _isLoadingProduct = true;
+      _isSessionStarted = true;
+      _nofaktur = _nofakController.text.trim().isNotEmpty
+          ? _nofakController.text.trim()
+          : 'MOB-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+      _selectedSupplierStatusPpn = _selectedSupplier['status_ppn'];
+      _cartItems = [];
     });
 
-    try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/pembelian');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'tgl_beli': DateTime.now().toIso8601String().split('T').first,
-          'supplier_id': _selectedSupplier['supplier_id'],
-          'user_id': 1, // Default user
-          'nofak_beli': _nofakController.text.trim().isNotEmpty
-              ? _nofakController.text.trim()
-              : null,
-        }),
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          setState(() {
-            _pembelianId = int.tryParse(data['data']['pembelian_id'].toString());
-            _nofaktur = data['data']['nofak_beli'];
-            _selectedSupplierStatusPpn = _selectedSupplier['status_ppn'];
-            _isLoadingProduct = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sesi Pembelian $_nofaktur dibuat! ✅')),
-          );
-          return;
-        }
-      }
-
-      setState(() {
-        _isLoadingProduct = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal membuat sesi Pembelian di server! ❌')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoadingProduct = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Koneksi gagal: $e ❌')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Sesi Input Lokal $_nofaktur dimulai! ✅')),
+    );
   }
 
   Future<void> _searchProducts(String query) async {
@@ -174,9 +133,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/products/search?q=$query');
-      final response = await http.get(url).timeout(const Duration(seconds: 8));
+      final response = await ApiClient.get('/api/products/search?q=$query').timeout(const Duration(seconds: 8));
 
       if (!mounted) return;
 
@@ -212,9 +169,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/products/barcode/$barcode');
-      final response = await http.get(url);
+      final response = await ApiClient.get('/api/products/barcode/$barcode');
 
       if (!mounted) return;
       setState(() {
@@ -436,7 +391,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
                 }
 
                 Navigator.pop(dialogContext); // Close dialog
-                _addItemToPembelian(productId, qty, price);
+                _addItemToPembelian(product, qty, price);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),
@@ -452,103 +407,157 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     );
   }
 
-  Future<void> _addItemToPembelian(String prodId, double qty, double price) async {
-    if (_pembelianId == null) return;
+  void _addItemToPembelian(dynamic product, double qty, double price) {
+    final String productId = (product['product_id'] ?? '').toString();
+    final String productName = (product['product_name'] ?? '').toString();
+    final String? barcodeStr = product['barcode']?.toString();
 
     setState(() {
-      _isLoadingProduct = true;
-    });
-
-    try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/pembelian/$_pembelianId/add-item');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'product_id': prodId,
+      final index = _cartItems.indexWhere((item) => item['product_id'].toString() == productId);
+      if (index != -1) {
+        _cartItems[index]['qty_beli'] = (_cartItems[index]['qty_beli'] ?? 0.0) + qty;
+        _cartItems[index]['harga_beli'] = price;
+        _cartItems[index]['sub_total'] = _cartItems[index]['qty_beli'] * price;
+      } else {
+        _cartItems.add({
+          'product_id': productId,
+          'product_name': productName,
+          'barcode': barcodeStr,
           'qty_beli': qty,
           'harga_beli': price,
-          'disc': 0,
-        }),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _isLoadingProduct = false;
-      });
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item berhasil ditambahkan ke keranjang! ✅'), backgroundColor: Color(0xFF10B981)),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal menambahkan item! ❌'), backgroundColor: Color(0xFFEF4444)),
-        );
+          'sub_total': qty * price,
+        });
       }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoadingProduct = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e ❌')),
-      );
-    }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('"$productName" ditambahkan ke keranjang! 🛒'),
+        backgroundColor: const Color(0xFF10B981),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   Future<void> _finalizePembelian() async {
-    if (_pembelianId == null) return;
+    if (_cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keranjang masih kosong! ❌'), backgroundColor: Color(0xFFEF4444)),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Konfirmasi', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menyimpan dan memproses ${_cartItems.length} barang masuk ke server?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
+            child: const Text('Ya, Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
 
     setState(() {
       _isLoadingProduct = true;
     });
 
     try {
-      final apiLink = await getApiLink();
-      final url = Uri.parse('$apiLink/api/pembelian/$_pembelianId/finalize');
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
+      final createRes = await ApiClient.post(
+        '/api/pembelian',
+        body: {
+          'tgl_beli': DateTime.now().toIso8601String().split('T').first,
+          'supplier_id': _selectedSupplier['supplier_id'],
+          'user_id': 1,
+          'nofak_beli': _nofakController.text.trim().isNotEmpty
+              ? _nofakController.text.trim()
+              : null,
+        },
       );
+
+      if (createRes.statusCode != 201) {
+        throw Exception('Gagal membuat sesi pembelian di server (Status: ${createRes.statusCode})');
+      }
+
+      final createData = json.decode(createRes.body);
+      if (createData['success'] != true || createData['data'] == null) {
+        throw Exception('Respon server tidak valid saat membuat sesi');
+      }
+
+      final int pembelianId = int.parse(createData['data']['pembelian_id'].toString());
+      final String generatedNofaktur = createData['data']['nofak_beli'];
+
+      for (final item in _cartItems) {
+        final addRes = await ApiClient.post(
+          '/api/pembelian/$pembelianId/add-item',
+          body: {
+            'product_id': item['product_id'],
+            'qty_beli': item['qty_beli'],
+            'harga_beli': item['harga_beli'],
+            'disc': 0,
+          },
+        );
+
+        if (addRes.statusCode != 200) {
+          throw Exception('Gagal menambahkan produk "${item['product_name']}" ke server');
+        }
+      }
+
+      final finalizeRes = await ApiClient.post('/api/pembelian/$pembelianId/finalize');
+
+      if (finalizeRes.statusCode != 200) {
+        throw Exception('Gagal memproses finalisasi stok di server');
+      }
 
       if (!mounted) return;
       setState(() {
         _isLoadingProduct = false;
+        _isSessionStarted = false;
+        _nofaktur = null;
+        _selectedSupplier = null;
+        _selectedSupplierStatusPpn = null;
+        _nofakController.clear();
+        _searchResults = [];
+        _searchProductController.clear();
+        _cartItems = [];
       });
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transaksi Barang Masuk berhasil diselesaikan dan stok bertambah! ✅'),
-            backgroundColor: Color(0xFF10B981),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        setState(() {
-          _pembelianId = null;
-          _nofaktur = null;
-          _selectedSupplier = null;
-          _selectedSupplierStatusPpn = null;
-          _nofakController.clear();
-          _searchResults = [];
-          _searchProductController.clear();
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal menyelesaikan transaksi! ❌'), backgroundColor: Color(0xFFEF4444)),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Transaksi $generatedNofaktur berhasil disimpan ke server! ✅'),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoadingProduct = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e ❌')),
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Error', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          content: Text('Terjadi kesalahan saat menyimpan transaksi:\n$e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       );
     }
   }
@@ -560,7 +569,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
         title: const Text('Scan Barang Masuk'),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        actions: _pembelianId != null
+        actions: _isSessionStarted
             ? [
                 TextButton.icon(
                   onPressed: _finalizePembelian,
@@ -598,7 +607,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
                       ),
                     ),
                   )
-                : _pembelianId == null
+                : !_isSessionStarted
                     ? _buildCreateSessionForm()
                     : _buildInputProductSection(),
       ),
@@ -694,20 +703,14 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _isLoadingProduct ? null : _startPembelianSession,
+              onPressed: _startPembelianSession,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: _isLoadingProduct
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                    )
-                  : const Text('Mulai Input Barang', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text('Mulai Input Barang', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -747,7 +750,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
                     style: const TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.w600, fontSize: 11),
                   ),
                   Text(
-                    'Sesi ID: $_pembelianId',
+                    'Sesi ID: Lokal',
                     style: const TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.w600, fontSize: 11),
                   ),
                 ],
@@ -773,19 +776,29 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
             ),
             labelColor: const Color(0xFF0F172A),
             unselectedLabelColor: const Color(0xFF64748B),
-            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            tabs: const [
-              Tab(
+            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+            tabs: [
+              const Tab(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.qr_code_scanner_rounded, size: 16), SizedBox(width: 6), Text('Pindai Barcode')],
+                  children: [Icon(Icons.qr_code_scanner_rounded, size: 14), SizedBox(width: 4), Text('Pindai')],
+                ),
+              ),
+              const Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [Icon(Icons.search_rounded, size: 14), SizedBox(width: 4), Text('Cari')],
                 ),
               ),
               Tab(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.search_rounded, size: 16), SizedBox(width: 6), Text('Cari Manual')],
+                  children: [
+                    const Icon(Icons.shopping_cart_rounded, size: 14),
+                    const SizedBox(width: 4),
+                    Text('Keranjang (${_cartItems.length})'),
+                  ],
                 ),
               ),
             ],
@@ -800,6 +813,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
             children: [
               _buildScannerTab(),
               _buildSearchTab(),
+              _buildCartTab(),
             ],
           ),
         ),
@@ -958,6 +972,184 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
                             );
                           },
                         ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCartTab() {
+    if (_cartItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.shopping_cart_outlined, size: 64, color: Color(0xFFCBD5E1)),
+            const SizedBox(height: 16),
+            const Text(
+              'Keranjang Kosong',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Pindai atau cari produk untuk menambahkannya.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final double grandTotal = _cartItems.fold(0.0, (sum, item) => sum + (item['sub_total'] ?? 0.0));
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+            itemCount: _cartItems.length,
+            itemBuilder: (context, index) {
+              final item = _cartItems[index];
+              final String name = item['product_name'] ?? '-';
+              final String barcode = item['barcode'] ?? '-';
+              final String id = item['product_id'] ?? '-';
+              final double qty = double.tryParse(item['qty_beli'].toString()) ?? 0.0;
+              final double price = double.tryParse(item['harga_beli'].toString()) ?? 0.0;
+              final double subTotal = double.tryParse(item['sub_total'].toString()) ?? 0.0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF0F172A).withAlpha(5), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  title: Text(
+                    name,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ID: $id  •  Barcode: $barcode',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withAlpha(20),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 2)} pcs',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '@ Rp ${price.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Rp ${subTotal.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
+                    onPressed: () {
+                      setState(() {
+                        _cartItems.removeAt(index);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('"$name" dihapus dari keranjang lokal 🗑️'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withAlpha(8),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Belanja:',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  ),
+                  Text(
+                    'Rp ${grandTotal.toStringAsFixed(0)}',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoadingProduct ? null : _finalizePembelian,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: _isLoadingProduct
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Selesai & Simpan Ke Server',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

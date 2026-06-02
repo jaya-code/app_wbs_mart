@@ -10,6 +10,8 @@ import 'package:coba1/pengaturan_page.dart';
 import 'package:coba1/printer_setup_page.dart';
 import 'package:coba1/services/printer_service.dart';
 import 'package:coba1/cetak_label_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:coba1/login_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,8 +58,9 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const MainMenuPage(),
+      home: const AuthWrapper(),
       routes: {
+        '/login': (context) => const LoginPage(),
         '/scan_stock_opname': (context) => const ScanStockOpnamePage(),
         '/hasil_stock_opname': (context) => const HasilStockOpnamePage(),
         '/search_product_stock_opname':
@@ -68,6 +71,47 @@ class MyApp extends StatelessWidget {
         '/printer_setup': (context) => const PrinterSetupPage(),
       },
     );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isLoading = true;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    setState(() {
+      _isAuthenticated = token != null;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5F5AF6)),
+          ),
+        ),
+      );
+    }
+    return _isAuthenticated ? const MainMenuPage() : const LoginPage();
   }
 }
 
