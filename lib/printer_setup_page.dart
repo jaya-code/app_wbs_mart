@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:blue_thermal_printer/blue_thermal_printer.dart';
+import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'services/printer_service.dart';
 
 class PrinterSetupPage extends StatefulWidget {
@@ -22,24 +24,93 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
   }
 
   Future<void> _checkStatusAndLoadDevices() async {
+    if (!mounted) return;
     setState(() {
       _isScanning = true;
-      _statusMessage = 'Mencari perangkat terpasang...';
+      _statusMessage = 'Memeriksa izin bluetooth...';
     });
     
+    // 1. Check if Bluetooth is available on this device
+    final bool bluetoothAvailable = await PrintBluetoothThermal.bluetoothEnabled;
+    if (!bluetoothAvailable) {
+      if (!mounted) return;
+      setState(() {
+        _isScanning = false;
+        _statusMessage = 'Bluetooth tidak aktif. Aktifkan Bluetooth terlebih dahulu.';
+      });
+      return;
+    }
+
+    // 2. Request runtime permissions (critical for release APK on Android 12+ and older versions)
+    if (Platform.isAndroid) {
+      // Request Bluetooth Connect and Scan permissions for Android 12+
+      // On Android 11 and below, these will be auto-granted immediately
+      await [
+        Permission.bluetoothConnect,
+        Permission.bluetoothScan,
+      ].request();
+
+      // Check if permission is granted after request
+      bool permissionGranted = await PrintBluetoothThermal.isPermissionBluetoothGranted;
+      
+      if (!permissionGranted) {
+        // On Android 11 and below, isPermissionBluetoothGranted checks for Location permission.
+        // If it's not granted, request Location permission explicitly.
+        await Permission.location.request();
+        permissionGranted = await PrintBluetoothThermal.isPermissionBluetoothGranted;
+      }
+
+      if (!permissionGranted) {
+        if (!mounted) return;
+        setState(() {
+          _isScanning = false;
+          _statusMessage = 'Izin Bluetooth ditolak. Buka Pengaturan > Aplikasi > Izin untuk mengaktifkan.';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin Bluetooth diperlukan. Harap izinkan akses Bluetooth di pengaturan HP.'),
+              backgroundColor: Color(0xFFEF4444),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+    } else {
+      // Non-Android platforms (e.g. iOS)
+      final bool permissionGranted = await PrintBluetoothThermal.isPermissionBluetoothGranted;
+      if (!permissionGranted) {
+        if (!mounted) return;
+        setState(() {
+          _isScanning = false;
+          _statusMessage = 'Izin Bluetooth ditolak. Aktifkan izin Bluetooth di pengaturan perangkat Anda.';
+        });
+        return;
+      }
+    }
+    
+    if (!mounted) return;
+    setState(() {
+      _statusMessage = 'Mencari perangkat terpasang...';
+    });
+
     await _printerService.checkConnection();
+    if (!mounted) return;
     final paired = await _printerService.getPairedDevices();
     
+    if (!mounted) return;
     setState(() {
       _devices = paired;
       _isScanning = false;
       _statusMessage = paired.isEmpty 
           ? 'Tidak ada perangkat bluetooth terpasang (paired).' 
-          : 'Berhasil menemukan perangkat.';
+          : 'Berhasil menemukan ${paired.length} perangkat.';
     });
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
+    if (!mounted) return;
     setState(() {
       _isScanning = true;
       _statusMessage = 'Menghubungkan ke ${device.name}...';
@@ -47,11 +118,11 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
 
     final success = await _printerService.connect(device);
 
+    if (!mounted) return;
+
     setState(() {
       _isScanning = false;
     });
-
-    if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +144,7 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
 
   Future<void> _disconnectDevice() async {
     final name = _printerService.connectedDevice?.name ?? 'Printer';
+    if (!mounted) return;
     setState(() {
       _isScanning = true;
       _statusMessage = 'Memutuskan koneksi...';
@@ -80,11 +152,11 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
 
     final success = await _printerService.disconnect();
 
+    if (!mounted) return;
+
     setState(() {
       _isScanning = false;
     });
-
-    if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +170,7 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
   }
 
   Future<void> _testPrint() async {
+    if (!mounted) return;
     setState(() {
       _statusMessage = 'Mencetak halaman uji coba...';
     });

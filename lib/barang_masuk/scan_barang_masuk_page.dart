@@ -780,25 +780,34 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
             unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
             tabs: [
               const Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.qr_code_scanner_rounded, size: 14), SizedBox(width: 4), Text('Pindai')],
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [Icon(Icons.qr_code_scanner_rounded, size: 14), SizedBox(width: 4), Text('Pindai')],
+                  ),
                 ),
               ),
               const Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.search_rounded, size: 14), SizedBox(width: 4), Text('Cari')],
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [Icon(Icons.search_rounded, size: 14), SizedBox(width: 4), Text('Cari')],
+                  ),
                 ),
               ),
               Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.shopping_cart_rounded, size: 14),
-                    const SizedBox(width: 4),
-                    Text('Keranjang (${_cartItems.length})'),
-                  ],
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.shopping_cart_rounded, size: 14),
+                      const SizedBox(width: 4),
+                      Text('Keranjang (${_cartItems.length})'),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -811,7 +820,7 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
             controller: _tabController,
             physics: const NeverScrollableScrollPhysics(), // disable swipe
             children: [
-              _buildScannerTab(),
+              KeepAliveWrapper(child: _buildScannerTab()),
               _buildSearchTab(),
               _buildCartTab(),
             ],
@@ -1155,3 +1164,25 @@ class _ScanBarangMasukPageState extends State<ScanBarangMasukPage> with SingleTi
     );
   }
 }
+
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+
+  const KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}
+

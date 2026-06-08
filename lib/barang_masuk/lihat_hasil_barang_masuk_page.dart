@@ -127,9 +127,13 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Cetak Label Harga',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  const Expanded(
+                    child: Text(
+                      'Cetak Label Harga',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -194,12 +198,16 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                                   size: 20,
                                 ),
                                 SizedBox(width: 8),
-                                Text(
-                                  'Printer Terputus',
-                                  style: TextStyle(
-                                    color: Color(0xFFEF4444),
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
+                                Expanded(
+                                  child: Text(
+                                    'Printer Terputus',
+                                    style: TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -216,7 +224,7 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton.icon(
+                              child: ElevatedButton(
                                 onPressed: () {
                                   Navigator.pop(dialogContext); // Close dialog
                                   Navigator.pushNamed(
@@ -227,18 +235,35 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                                     setState(() {});
                                   });
                                 },
-                                icon: const Icon(Icons.settings, size: 16),
-                                label: const Text('Buka Pengaturan'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFEF4444),
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 8,
+                                    horizontal: 12,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    Icon(Icons.settings, size: 16),
+                                    SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Buka Pengaturan',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -667,30 +692,7 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                                     ),
                                   ),
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  title: Text(
-                                    "$productId",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 6.0),
-                                    child: Text(
-                                      "$productName\nStok Real: $stokReal",
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF64748B),
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
+                                child: InkWell(
                                   onTap: () {
                                     showDialog(
                                       context: context,
@@ -721,66 +723,107 @@ class _LihatHasilBarangMasukPageState extends State<LihatHasilBarangMasukPage> {
                                           ),
                                     );
                                   },
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Print Button Wrapper
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFF5F5AF6,
-                                          ).withAlpha(20),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: IconButton(
-                                          icon: const Icon(
-                                            Icons.print_rounded,
-                                            color: Color(0xFF5F5AF6),
-                                            size: 18,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Left Section: Details (Expanded to prevent overflow)
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "$productId",
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                "$productName\nStok Real: $stokReal",
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF64748B),
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          onPressed:
-                                              () => showPrintDialog(item),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // Edit Button Wrapper
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFF3B82F6,
-                                          ).withAlpha(20),
-                                          shape: BoxShape.circle,
+                                        const SizedBox(width: 12),
+                                        // Right Section: Action Buttons
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Print Button Wrapper
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(
+                                                  0xFF5F5AF6,
+                                                ).withAlpha(20),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.print_rounded,
+                                                  color: Color(0xFF5F5AF6),
+                                                  size: 18,
+                                                ),
+                                                onPressed:
+                                                    () => showPrintDialog(item),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            // Edit Button Wrapper
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(
+                                                  0xFF3B82F6,
+                                                ).withAlpha(20),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit_rounded,
+                                                  color: Color(0xFF3B82F6),
+                                                  size: 18,
+                                                ),
+                                                onPressed:
+                                                    () =>
+                                                        showEditDialog(id, stokReal),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            // Delete Button Wrapper
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(
+                                                  0xFFEF4444,
+                                                ).withAlpha(20),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete_rounded,
+                                                  color: Color(0xFFEF4444),
+                                                  size: 18,
+                                                ),
+                                                onPressed: () => confirmHapus(id),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        child: IconButton(
-                                          icon: const Icon(
-                                            Icons.edit_rounded,
-                                            color: Color(0xFF3B82F6),
-                                            size: 18,
-                                          ),
-                                          onPressed:
-                                              () =>
-                                                  showEditDialog(id, stokReal),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // Delete Button Wrapper
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(
-                                            0xFFEF4444,
-                                          ).withAlpha(20),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: IconButton(
-                                          icon: const Icon(
-                                            Icons.delete_rounded,
-                                            color: Color(0xFFEF4444),
-                                            size: 18,
-                                          ),
-                                          onPressed: () => confirmHapus(id),
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

@@ -89,22 +89,11 @@ class _CetakLabelPageState extends State<CetakLabelPage>
         _scanned = false;
         _isLoading = false;
       });
-      try {
-        _scannerController.start();
-      } catch (e) {
-        debugPrint('Error starting scanner: $e');
-      }
     }
   }
 
   // Fetch product detail for scanning
   Future<void> _fetchProductForScan(String code) async {
-    try {
-      _scannerController.stop();
-    } catch (e) {
-      debugPrint('Error stopping scanner: $e');
-    }
-
     setState(() {
       _isLoading = true;
       _statusMessage = 'Mencari data produk...';
@@ -145,6 +134,7 @@ class _CetakLabelPageState extends State<CetakLabelPage>
         _resumeScanner();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _statusMessage = 'Terjadi kesalahan: $e';
@@ -917,23 +907,29 @@ class _CetakLabelPageState extends State<CetakLabelPage>
                   ),
                   tabs: [
                     const Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.qr_code_scanner_rounded, size: 14),
-                          SizedBox(width: 4),
-                          Text('Pindai'),
-                        ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.qr_code_scanner_rounded, size: 14),
+                            SizedBox(width: 4),
+                            Text('Pindai'),
+                          ],
+                        ),
                       ),
                     ),
                     const Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_rounded, size: 14),
-                          SizedBox(width: 4),
-                          Text('Cari'),
-                        ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_rounded, size: 14),
+                            SizedBox(width: 4),
+                            Text('Cari'),
+                          ],
+                        ),
                       ),
                     ),
                     Tab(
@@ -942,7 +938,12 @@ class _CetakLabelPageState extends State<CetakLabelPage>
                         children: [
                           const Icon(Icons.list_alt_rounded, size: 14),
                           const SizedBox(width: 4),
-                          Text('Antrian (${_printQueue.length})'),
+                          Flexible(
+                            child: Text(
+                              'Antrian (${_printQueue.length})',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -957,7 +958,7 @@ class _CetakLabelPageState extends State<CetakLabelPage>
                 controller: _tabController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _buildScannerView(),
+                  KeepAliveWrapper(child: _buildScannerView()),
                   _buildManualSearchView(),
                   _buildQueueView(),
                 ],
@@ -1303,146 +1304,162 @@ class _CetakLabelPageState extends State<CetakLabelPage>
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   clipBehavior: Clip.antiAlias,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    title: Text(
-                      item.productName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Barcode: ${item.barcode ?? "-"}  •  Rak: ${item.kodeRak ?? "-"}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left Section: Texts and details (Expanded to prevent overflow)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      item.templateType == 'label'
-                                          ? const Color(
-                                            0xFF3B82F6,
-                                          ).withAlpha(20)
-                                          : const Color(
-                                            0xFF5F5AF6,
-                                          ).withAlpha(20),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  item.templateType == 'label'
-                                      ? 'Label Rak'
-                                      : 'Price Tag',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        item.templateType == 'label'
-                                            ? const Color(0xFF2563EB)
-                                            : const Color(0xFF5F5AF6),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
                               Text(
-                                'Rp ${item.price.toStringAsFixed(0)}',
+                                item.productName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
                                   color: Color(0xFF0F172A),
                                 ),
                               ),
-                              if (item.templateType == 'pricetag') ...[
-                                if (item.memberPrice != null) ...[
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '(Mem: Rp ${item.memberPrice!.toStringAsFixed(0)})',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF10B981),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Barcode: ${item.barcode ?? "-"}  •  Rak: ${item.kodeRak ?? "-"}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          item.templateType == 'label'
+                                              ? const Color(0xFF3B82F6).withAlpha(20)
+                                              : const Color(0xFF5F5AF6).withAlpha(20),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      item.templateType == 'label'
+                                          ? 'Label Rak'
+                                          : 'Price Tag',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            item.templateType == 'label'
+                                                ? const Color(0xFF2563EB)
+                                                : const Color(0xFF5F5AF6),
+                                      ),
                                     ),
                                   ),
-                                ],
-                                const SizedBox(width: 6),
-                                Text(
-                                  '(Ret: ${item.periodeReturn ?? "7 Hari"})',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF64748B),
+                                  Text(
+                                    'Rp ${item.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0F172A),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  if (item.templateType == 'pricetag') ...[
+                                    if (item.memberPrice != null)
+                                      Text(
+                                        '(Mem: Rp ${item.memberPrice!.toStringAsFixed(0)})',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    Text(
+                                      '(Ret: ${item.periodeReturn ?? "7 Hari"})',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'x${item.copies}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF475569),
-                          ),
                         ),
+                        
                         const SizedBox(width: 12),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit_rounded,
-                            color: Color(0xFF3B82F6),
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            // Map back to temporary map structure to re-use _showAddToQueueDialog
-                            final productMap = {
-                              'product_id': item.productId,
-                              'product_name': item.productName,
-                              'barcode': item.barcode,
-                              'kode_rak': item.kodeRak,
-                              'selling_price': item.price,
-                              'selling_price_member': item.memberPrice,
-                              'periode_return': item.periodeReturn,
-                            };
-                            _showAddToQueueDialog(
-                              productMap,
-                              existingItem: item,
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: Color(0xFFEF4444),
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _printQueue.removeAt(index);
-                            });
-                          },
+                        
+                        // Right Section: Copies & Compact Action Buttons
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'x${item.copies}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(6),
+                              icon: const Icon(
+                                Icons.edit_rounded,
+                                color: Color(0xFF3B82F6),
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                final productMap = {
+                                  'product_id': item.productId,
+                                  'product_name': item.productName,
+                                  'barcode': item.barcode,
+                                  'kode_rak': item.kodeRak,
+                                  'selling_price': item.price,
+                                  'selling_price_member': item.memberPrice,
+                                  'periode_return': item.periodeReturn,
+                                };
+                                _showAddToQueueDialog(
+                                  productMap,
+                                  existingItem: item,
+                                );
+                              },
+                            ),
+                            IconButton(
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(6),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Color(0xFFEF4444),
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _printQueue.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -1483,32 +1500,44 @@ class _CetakLabelPageState extends State<CetakLabelPage>
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Hapus Semua',
-                    style: TextStyle(
-                      color: Color(0xFFEF4444),
-                      fontWeight: FontWeight.bold,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Hapus Semua',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: _printAllQueue,
-                  icon: const Icon(Icons.print_rounded, color: Colors.white),
-                  label: Text(
-                    'Cetak ($totalCopies)',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5F5AF6),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.print_rounded, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Cetak ($totalCopies)',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1520,3 +1549,25 @@ class _CetakLabelPageState extends State<CetakLabelPage>
     );
   }
 }
+
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+
+  const KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  bool get wantKeepAlive => true;
+}
+
